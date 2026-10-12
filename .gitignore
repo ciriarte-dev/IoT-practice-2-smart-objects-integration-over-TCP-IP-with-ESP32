@@ -3,3 +3,7 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Configuracion local de los ESP32 (credenciales WiFi).
+/src/sensor/secrets.h
+/src/actuator/secrets.h

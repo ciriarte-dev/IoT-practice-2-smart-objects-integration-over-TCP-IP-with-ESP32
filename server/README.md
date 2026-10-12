@@ -2,51 +2,19 @@
 
 ## Estado y alcance
 
-Etapas 1 y 2 completadas: protocolo aprobado e infraestructura TCP básica
-implementada. El contrato descrito en las secciones de identificación, mediciones,
-comandos y temporizadores sigue pendiente de implementación. Todavía no se ha
-verificado la interoperabilidad con los ESP32.
+Servidor de integración implementado en `feature/integracion`, con Python 3
+(3.7 o posterior) y biblioteca estándar. Conserva la infraestructura `socket` /
+`selectors` y aplica el contrato aprobado que se reproduce abajo sin cambios.
 
-Ya se puede ejecutar el servidor y sus pruebas automatizadas. La implementación
-continuará por etapas, con aprobación antes de avanzar.
-Los cambios del servidor se limitarán a `server/`, en `feature/server`, sin commits
-ni merges automáticos.
+Implementado: identificación SENSOR/ACTUATOR, validación de líneas y distancias,
+clasificación, comandos, caducidad, reenvío periódico, limpieza de sesiones y
+aceptación de reconexiones. Los registros muestran conexiones, identificaciones,
+mediciones, cambios de estado, caducidad, errores y desconexiones.
 
-### Funcionalidades implementadas en la etapa 2
-
-- `TCPServer` escucha por TCP/IPv4 en `0.0.0.0:5000` por defecto, con host y puerto
-  configurables desde la línea de comandos.
-- Usa `selectors.DefaultSelector` y sockets no bloqueantes para aceptar múltiples
-  conexiones sin esperar que un cliente inactivo envíe datos.
-- Cada `ClientConnection` mantiene su socket, dirección y `receive_buffer`
-  independiente. Los datos se conservan como bytes, incluidos los fragmentos.
-- Registra inicio, conexiones, desconexiones, errores y cierre mediante `logging`.
-- Gestiona cierre remoto, errores de recepción y cierre por Ctrl+C; libera los
-  sockets y el selector. Los errores de inicio producen salida con código 1,
-  argumentos inválidos con código 2 y Ctrl+C con código 0.
-- Limita el buffer acumulado a 65536 bytes por cliente. Si se excede, cierra solo
-  esa conexión y descarta su buffer; este límite se configura en el constructor.
-
-**En esta etapa no hay respuestas, ni siquiera a HELLO.** No se decodifican ni
-separan líneas, no se asignan roles y no se aplican los temporizadores del protocolo.
-El límite temporal de 64 KiB del transporte no sustituye el límite contractual
-de 128 bytes por línea: este último se aplicará al implementar ProtocolHandler.
-Un cliente que envíe datos continuamente acabará llenando el buffer porque aún
-no existe un consumidor de mensajes. Los clientes silenciosos permanecen conectados.
-
-El tiempo de espera del selector es de 0.5 s y no es un timeout de cliente.
-La caída silenciosa de una red puede no detectarse inmediatamente; los mecanismos
-de vigencia y apagado seguro siguen pendientes de las etapas posteriores.
-
-### Archivos actuales
-
-| Archivo | Función |
-| --- | --- |
-| `server/main.py` | Argumentos, configuración de logging y ejecución. |
-| `server/tcp_server.py` | Clases TCPServer y ClientConnection. |
-| `server/__init__.py` | Permite importar el servidor como paquete. |
-| `server/tests/test_tcp_server.py` | Pruebas de transporte y de la línea de comandos. |
-| `server/README.md` | Alcance, contrato, uso y resultados. |
+Se ha verificado con clientes TCP locales y pruebas controladas de escritura.
+No se ha probado físicamente con los ESP32. El firmware del actuador todavía
+requiere las correcciones aprobadas de integración: completar el servidor no
+hace compatible por sí solo su parser ni añade su timeout local de apagado.
 
 ## Responsabilidades
 
@@ -249,132 +217,161 @@ SENSOR -> servidor: INVALID\n
 servidor -> ACTUATOR: LED ALL OFF\n
 ```
 
-## Arquitectura actual y prevista
+## Arquitectura implementada
 
-Python 3 (3.7 o posterior), exclusivamente biblioteca estándar. TCPServer ya utiliza
-un bucle de eventos con `socket` y `selectors`, sockets no bloqueantes y registro
-mediante `logging`, sin un hilo por cliente. Los temporizadores de aplicación y
-los envíos se incorporarán en las siguientes etapas.
+```text
+ESP32 SENSOR -- HELLO / DIST / INVALID --> TCPServer
+                                           |
+                                    ProtocolHandler
+                                           |
+                                    DistanceController
+                                           |
+ESP32 ACTUATOR <-- OK / LED ... ------------+
+```
 
-Referencias de la biblioteca estándar: [selectors](https://docs.python.org/3/library/selectors.html)
-y [socket](https://docs.python.org/3/library/socket.html).
+| Clase | Archivo | Responsabilidad |
+| --- | --- | --- |
+| `TCPServer` | `tcp_server.py` | Sockets no bloqueantes, selector, registro de roles, eventos, temporizadores y cierre. |
+| `ClientConnection` | `tcp_server.py` | Rol, fragmento de entrada, cola independiente y estado de cierre de cada conexión. |
+| `OutgoingMessage` | `tcp_server.py` | Bytes, desplazamiento parcial, fecha de encolado y caducidad del comando. |
+| `ProtocolHandler` | `protocol.py` | ASCII/LF, límite de 128 bytes, identificación, números y errores del contrato. |
+| `ProtocolError` | `protocol.py` | Código de error y decisión de cerrar después de intentar responder. |
+| `DistanceController` | `controller.py` | Clasificación exacta, vigencia y apagado, sin dependencia de sockets. |
 
-| Clase | Responsabilidad prevista |
-| --- | --- |
-| `TCPServer` | Implementados escucha, selector, recepción y cierre. Pendientes escritura y temporizadores de aplicación. |
-| `ClientConnection` | Implementado estado de transporte por conexión; no tiene roles. |
-| `ClientManager` | Sesiones, roles, buffers por conexión y limpieza al desconectar. |
-| `ProtocolHandler` | Delimitación, validación y construcción de mensajes. |
-| `DistanceController` | Clasificación, vigencia y estado de LEDs, independiente de sockets. |
+La gestión de clientes sigue dentro de TCPServer; no es necesaria una clase
+ClientManager adicional para estos dos roles. `decimal.Decimal` conserva los
+límites decimales sin redondear antes de clasificar. No se convierte a float.
 
-`server/main.py` es el punto de entrada. `start()`, `poll_once()` y `close()` permiten
-controlar TCPServer en pruebas; `serve_forever()` gestiona el ciclo completo y
-garantiza el cierre al salir. Estos métodos se usan desde el mismo hilo.
-ClientManager, ProtocolHandler y DistanceController todavía no existen.
+`start()`, `poll_once()` y `close()` permiten controlar el ciclo en las pruebas;
+`serve_forever()` libera recursos al salir. Todos se usan desde un único hilo.
+El reloj es monotónico y se puede sustituir en pruebas. El tiempo de espera del
+selector se ajusta al próximo plazo, además de revisar los temporizadores antes
+de escribir y después de procesar eventos.
+
+### Envíos y clientes lentos
+
+- Cada conexión conserva su propio fragmento de entrada, hasta 128 bytes, y
+  procesa hasta 4096 bytes recibidos por evento. No acumula un historial de lecturas.
+- Se registra EVENT_WRITE solo cuando hay salida pendiente. Cada evento intenta
+  escribir una trama; una escritura parcial conserva su desplazamiento.
+- La cola de salida admite por defecto 1024 bytes pendientes y cada trama dispone
+  de 1 segundo desde que se encola. El avance parcial no reinicia ese plazo.
+  Al exceder cualquiera de esos límites se cierra únicamente esa sesión.
+- Una orden de apagado retira colores todavía no enviados. Si una trama de color
+  ya se envió parcialmente, se cierra la conexión en vez de intercalar otra orden
+  dentro de ella. El actuador debe aplicar su apagado por desconexión/timeout.
+- Una trama caducada no empieza a enviarse. Un OFF pendiente se conserva sin
+  reiniciar su plazo en cada reenvío; así un cliente lento tampoco puede mantener
+  indefinidamente una cola de apagado sin consumirla.
+- En la reconexión del actuador se envían OK y OFF, y se invalida el estado anterior
+  hasta recibir otra distancia válida. Los buffers de sesiones cerradas se borran.
+- Ctrl+C intenta enviar OFF sin bloquear y luego cierra todos los sockets. Ese
+  intento no equivale a confirmación del apagado físico.
+
+Los límites de cola y tiempo de envío concretan la protección de transporte ya
+prevista en el contrato; no añaden ni cambian mensajes de aplicación.
+Las respuestas ERROR se intentan enviar antes de un cierre por protocolo, pero
+un fallo de transporte puede impedir su entrega.
 
 ## Configuración y ejecución
 
-Valores predeterminados: `0.0.0.0`, puerto TCP `5000`, ambos configurables.
-Los ESP32 deberán usar la IP real del equipo servidor en la red local;
-`0.0.0.0` no es una dirección de destino para los clientes.
-No se ha asignado todavía una IP real ni comprobado la disponibilidad del puerto.
-
-Desde la raíz del proyecto, sin instalar dependencias externas:
+Desde la raíz del proyecto:
 
 ```sh
 python3 server/main.py --host 0.0.0.0 --port 5000
 ```
 
-También se puede ejecutar `python3 server/main.py` para usar los valores por
-defecto, o `python3 -m server.main`. Consultar `python3 server/main.py --help`.
-Para escuchar únicamente en el propio equipo y usar otro puerto:
+También funcionan `python3 server/main.py` y `python3 -m server.main`.
+Para revisar los argumentos: `python3 server/main.py --help`.
+No se instalan dependencias externas. Para detenerlo, usar Ctrl+C.
 
-```sh
-python3 server/main.py --host 127.0.0.1 --port 5001
-```
+| Argumento | Valor predeterminado | Uso |
+| --- | --- | --- |
+| `--host` | `0.0.0.0` | Escucha IPv4; `127.0.0.1` permite pruebas solo locales. |
+| `--port` | `5000` | Puerto TCP; 0 pide un puerto libre para pruebas. |
+| `--identification-timeout` | `5.0` | Segundos máximos antes de identificarse. |
+| `--measurement-ttl` | `2.0` | Segundos de vigencia de la última lectura válida. |
+| `--resend-interval` | `0.5` | Segundos entre reenvíos al actuador. |
+| `--send-timeout` | `1.0` | Segundos máximos de permanencia de una trama en la cola. |
 
-El puerto acepta valores entre 0 y 65535; 0 solicita al sistema un puerto libre
-para pruebas. El registro de inicio muestra el puerto efectivo. Si 5000 está
-ocupado, el servidor informa el error y termina; elegir otro con `--port`.
-Para detenerlo, pulsar Ctrl+C en la terminal donde está ejecutándose.
+Mantener los valores acordados de 5/2/0.5 segundos en la integración con los ESP32.
+Los argumentos temporales aceptan solo números positivos y finitos. El constructor
+permite ajustar `max_pending_bytes`, con un mínimo de 32 bytes.
 
-Prueba manual opcional con dos terminales adicionales, si se dispone de `nc`:
+El servidor sale con código 0 ante Ctrl+C, 1 ante errores del sistema como puerto
+ocupado y 2 ante argumentos inválidos. Si 5000 está ocupado, identificar el servicio
+que lo utiliza o coordinar otro puerto en los tres componentes.
+
+Los ESP32 deben usar la IPv4 real del Mac en su red local y el puerto 5000.
+`0.0.0.0` sirve para escuchar y no es una dirección de destino. Verificar que el
+firewall permita conexiones entrantes a Python y que la red no aísle los clientes.
+No se han verificado la red, firewall o dispositivos físicos en esta entrega.
+
+### Prueba manual con clientes locales
+
+Con el servidor activo, abrir dos terminales y ejecutar en cada una:
 
 ```sh
 nc 127.0.0.1 5000
 ```
 
-Dejar una conexión sin escribir y enviar texto desde la otra: ambas deben seguir
-abiertas, aunque no habrá respuesta de aplicación. Cerrar una con Ctrl+C y
-comprobar su desconexión en el registro. Detener finalmente el servidor con Ctrl+C.
+Identificarse antes de 5 segundos. En una terminal escribir `HELLO ACTUATOR` y
+pulsar Enter: debe responder OK y LED ALL OFF. En la otra escribir HELLO SENSOR,
+esperar OK y enviar DIST 10, DIST 20, DIST 40.01 o INVALID, cada uno con Enter.
+La terminal del actuador debe mostrar el comando correspondiente. Si no llega
+otra lectura válida en 2 segundos, debe volver a OFF. Los comandos se repiten
+cada 500 ms. Estas terminales no controlan LEDs físicos.
 
-Los argumentos de tiempos de espera del protocolo se documentarán cuando se
-implementen. No hay identificación, clasificación ni registros de LEDs todavía.
+## Pruebas automatizadas y resultados
 
-## Plan de pruebas y resultados
-
-Las pruebas actuales usan `unittest` y sockets TCP reales en loopback, sin ESP32
-ni servicios externos, con puertos libres asignados por el sistema.
-
-Desde la raíz del proyecto:
+Desde la raíz:
 
 ```sh
 python3 -B -W error::ResourceWarning -m unittest discover -s server/tests -v
 ```
 
-Resultado de la etapa 2: **13 pruebas aprobadas, 0 fallos y 0 omisiones**, en
-Python 3.14.5 sobre macOS. Última ejecución: 0.204 s. Verifican:
+Resultado: **36 pruebas aprobadas, 0 fallos, 0 omisiones**, Python 3.14.5 sobre
+macOS. Última ejecución: 0.272 s. La suite usa puertos libres en 127.0.0.1,
+clientes TCP locales y un reloj controlado para probar los plazos sin esperas.
+Los envíos parciales y la contrapresión se fuerzan mediante dobles de `send()`
+sobre las sesiones de prueba; no representan una medición de congestión WiFi.
+La prueba de Ctrl+C envía SIGINT a un proceso real del servidor.
 
-- Valores por defecto y escucha efectiva en la dirección configurada.
-- Dos clientes simultáneos y recepción mientras el otro permanece inactivo.
-- Independencia de buffers y conservación de fragmentos recibidos.
-- Registro de conexiones/desconexiones y continuidad de los demás clientes.
-- Desconexión abrupta mediante reset TCP y aceptación de conexiones posteriores.
-- Límite del buffer sin afectar a otro cliente.
-- Limpieza de buffers, cierre repetido y reutilización del puerto.
-- Puerto ocupado y argumentos inválidos con salida controlada.
-- Ausencia de respuestas o interpretación de HELLO en esta etapa.
-- Ctrl+C simulado con SIGINT a un proceso real, cierre del cliente conectado y
-  salida con código 0, sin traceback.
-
-Las pruebas de reset mediante SO_LINGER y SIGINT están marcadas para omitirse
-en Windows por diferencias de plataforma. El primer intento dentro del sandbox
-fue bloqueado al abrir puertos; la ejecución final con permiso para sockets
-locales pasó completa. No se realizaron pruebas con ESP32 físicos ni sobre WiFi.
-
-### Casos pendientes para las siguientes etapas
-
-Esta matriz corresponde al contrato completo, no a funcionalidades ya probadas.
-Para probar los futuros temporizadores se preferirá un reloj controlable.
-
-| Caso | Resultado esperado |
+| Caso | Resultado |
 | --- | --- |
-| 10 y 19.99 cm | Rojo intermitente. |
-| 20, 30 y 40 cm | Amarillo. |
-| 40.01 y 50 cm | Verde. |
-| INVALID, número rechazado o DIST fuera de 2–400 cm | Todos apagados. |
-| Desconexión del sensor o caducidad | Apagado sin detener el servidor. |
-| Desconexión del actuador | Liberar su sesión; seguir atendiendo al sensor. |
-| Reconexión de ambos roles | Nueva identificación y ausencia de estados antiguos. |
-| Mensaje dividido entre varias recepciones | Procesar solo después del LF. |
-| Varios mensajes en una recepción | Procesar todos, en orden. |
-| Mensajes inválidos, extensos, no ASCII o rol duplicado | Error y política de cierre documentados. |
-| Ambos clientes conectados simultáneamente | Atención independiente y entrega de comandos. |
-| Actuador reconectado con lectura anterior aún vigente | Apagado hasta una lectura nueva. |
-| Envíos parciales o cliente lento | Sin corrupción de mensajes ni bloqueo global. |
+| Identificación de ambos roles y conexiones simultáneas | Aprobado. |
+| 10 y 19.99 cm | LED RED BLINK. |
+| 20, 30 y 40 cm | LED YELLOW ON. |
+| 40.01 y 50 cm | LED GREEN ON. |
+| Valores 2 y 400 cm y decimales muy próximos a los umbrales | Aprobado, sin redondeo previo. |
+| INVALID, valores fuera de rango, NaN, formatos incorrectos | OFF y error cuando corresponde. |
+| Desconexión y reconexión del sensor | OFF y nueva identificación. |
+| Caducidad a los 2 s y reenvío cada 500 ms | Aprobado. |
+| Reconexión del actuador con lectura anterior aún vigente | OK/OFF y espera de nueva lectura. |
+| Líneas fragmentadas y varias líneas en una recepción | Aprobado. |
+| Roles desconocidos/duplicados, identificación ausente o vencida | Error y cierre según el contrato. |
+| Línea de exactamente 128 bytes, línea excesiva y no ASCII | Aprobado. |
+| Actuador intentando enviar distancias | ERROR FORMAT, sin alterar la lectura del sensor. |
+| Escrituras parciales, cola llena y timeout de salida | Aprobado. |
+| Color pendiente invalidado o trama parcial obsoleta | Retirada o cierre de sesión, sin concatenar tramas corruptas. |
+| Puerto ocupado, argumentos inválidos, cierre repetido y Ctrl+C | Aprobado. |
 
-El parpadeo y el apagado autónomo del actuador necesitarán además validación
-de su firmware por el integrante responsable.
+Las pruebas básicas anteriores se conservaron y adaptaron donde cambió el alcance:
+HELLO ahora debe recibir respuesta y las líneas completas se procesan, en lugar
+de permanecer indefinidamente en el buffer. Las pruebas de reset TCP mediante
+SO_LINGER y de SIGINT se omiten en Windows por diferencias de plataforma.
 
-## Etapas siguientes
+El primer intento dentro del sandbox fue bloqueado al abrir puertos locales.
+La ejecución final con permiso para sockets locales pasó completa.
 
-1. Protocolo documentado: completada.
-2. Servidor TCP básico: completada.
-3. Identificación y gestión de clientes.
-4. Recepción y validación de mediciones.
-5. Algoritmo de control y envío de comandos.
-6. Reconexión, errores y apagado seguro.
-7. Pruebas automatizadas y documentación de resultados.
+## Pendientes de integración física
 
-Cada etapa requiere aprobación antes de comenzar. Este documento no implica
-que las etapas siguientes estén implementadas.
+- Adaptar el firmware del actuador al contrato: comandos completos, espera de OK,
+  apagado por comando inválido, timeout local de 3 s y parpadeo de 500 ms.
+- Configurar la red real y cargar ambos ESP32.
+- Verificar lectura física del HC-SR04, cadencia, LEDs y reconexiones en WiFi.
+- Verificar apagado físico ante caída del servidor o pérdida silenciosa del enlace.
+
+No se modificaron los ESP32 ni PlatformIO durante esta implementación del servidor.
+No se realizaron commits ni merges. Las pruebas locales no certifican el estado
+de los LEDs ni la compatibilidad del firmware actual del actuador.

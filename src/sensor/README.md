@@ -1,7 +1,9 @@
-# Sensor HC-SR04 — Etapa 1
+# Sensor HC-SR04 — Medición y cliente WiFi/TCP
 
-Firmware Arduino para ESP32 DOIT DEVKIT V1. Solo mide y valida distancias,
-y muestra el resultado por Serial. No incluye WiFi, TCP ni control de LEDs.
+Firmware Arduino para ESP32 DOIT DEVKIT V1. Mide y valida distancias, muestra
+el resultado por Serial y envía las lecturas por TCP. No clasifica distancias
+ni controla LEDs. Conserva la clase UltrasonicSensor original sin cambios.
+El contrato es [server/README.md](../../server/README.md).
 
 ## Cableado
 
@@ -11,22 +13,21 @@ Realizar el cableado con la alimentacion desconectada.
 | --- | --- |
 | VCC | 5 V |
 | GND | GND comun con el ESP32 y el divisor |
-| TRIG | D4 (GPIO 4) |
-| ECHO | Entrada del divisor de tension; salida reducida a D2 (GPIO 2) |
+| TRIG | GPIO 32 |
+| ECHO | Entrada del divisor de tension; salida reducida a GPIO 35 |
 
 No conectar ECHO de 5 V directamente al GPIO. Verificar que la salida del
-divisor sea compatible con 3.3 V. GPIO 2 se configura como entrada, sin
+divisor sea compatible con 3.3 V. GPIO 35 se configura como entrada, sin
 pull-up interno; el divisor debe proporcionar tambien la conexion a GND.
 
-GPIO 2 interviene en la seleccion del modo de arranque: debe estar bajo o
-desconectado al entrar en el cargador serie. Si ECHO lo mantiene alto durante
-el reinicio, puede impedir la carga. Ver la [documentacion de Espressif](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/boot-mode-selection.html).
+Esta configuración reemplaza el cableado anterior D4/D2. Cambiar también los
+cables físicos antes de usar este firmware.
 
 ## Implementacion
 
 - `UltrasonicSensor.h/.cpp`: clase con pines configurables mediante constructor,
   inicializacion con `begin()` y lectura con `measure()`.
-- `main.cpp`: usa TRIG 4 y ECHO 2, programa una lectura cada 500 ms mediante
+- `main.cpp`: usa TRIG 32 y ECHO 35, programa una lectura cada 500 ms mediante
   `millis()` y muestra la marca de tiempo de inicio de cada intento.
 - Resultado: estado `Ok`, `EchoTimeout` u `OutOfRange`, distancia en cm y
   duracion del eco. Una distancia invalida es `NAN`, nunca una lectura previa
@@ -42,6 +43,78 @@ el reinicio, puede impedir la carga. Ver la [documentacion de Espressif](https:/
   La resta sin signo admite el desbordamiento de `millis()`.
 
 Referencia: [ficha del HC-SR04](https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf).
+
+## Configuración WiFi y servidor
+
+`secrets.example.h` contiene únicamente valores vacíos/de ejemplo. Copiarlo a
+`src/sensor/secrets.h` si ese archivo local no existe. En este equipo ya se creó
+con valores vacíos. Editar únicamente el archivo local:
+
+- `SENSOR_WIFI_SSID`: nombre de la red WiFi.
+- `SENSOR_WIFI_PASSWORD`: contraseña de esa red.
+- `SENSOR_SERVER_IP`: IPv4 real del equipo servidor en la red local.
+- `SENSOR_SERVER_PORT`: mantener `5000`.
+
+No usar `0.0.0.0` ni `127.0.0.1` como destino del ESP32. El valor `0.0.0.0`
+del ejemplo es un marcador que deshabilita la red, no una dirección operativa.
+Sin SSID o sin una IPv4 válida distinta de cero, solo se ejecuta la lectura local
+y aparece `[CONFIG]` en Serial. No hace falta una contraseña no vacía para una
+red abierta. Los registros del sensor no imprimen la contraseña.
+
+`.gitignore` excluye `src/sensor/secrets.h` y `src/actuator/secrets.h`; la plantilla
+sí se versiona. No compartir firmware compilado con credenciales reales, ya que
+estas quedan incorporadas en el binario. No se requieren bibliotecas externas:
+WiFi.h/WiFiClient pertenecen al framework Arduino ESP32 instalado.
+
+## Cliente TCP y temporización
+
+`SensorClient` implementa los estados de configuración deshabilitada, espera
+WiFi, espera TCP, envío de HELLO, espera de OK y sesión lista. `SensorConfig.h`
+centraliza pines, intervalos y límites.
+
+1. Iniciar WiFi y reintentar cada 2000 ms mientras no se conecte.
+2. Abrir TCP al servidor y enviar exactamente `HELLO SENSOR\n`.
+3. Esperar exactamente `OK\n`; aceptar que llegue dividido en varias recepciones.
+4. Enviar solo las mediciones nuevas obtenidas después de OK: `DIST 25.50\n`
+   o `INVALID\n`. La salida es ASCII, con LF, sin CR ni unidades adicionales.
+5. Al desconectarse, descartar buffers y cualquier trama pendiente; reconectar
+   después de 2000 ms y repetir HELLO/OK. Nunca reproducir lecturas anteriores.
+
+La medición local continúa también sin WiFi/TCP y mientras se espera OK. Las
+lecturas fuera de una sesión lista se descartan para la transmisión. La distancia
+se valida otra vez antes de enviarla: estado Ok, valor finito e intervalo 2–400 cm.
+Todo fallo produce INVALID, sin transmitir NaN, infinitos ni valores fuera de rango.
+
+| Operación | Límite/configuración |
+| --- | --- |
+| Intentos de medición | 500 ms mediante millis() |
+| Espera de eco | 30 ms; clase original |
+| Intento de conexión TCP a IPv4 | Timeout de 100 ms; no se usa resolución DNS |
+| Espera de OK | 5000 ms desde la conexión TCP |
+| Trama de salida pendiente | Una sola trama, máximo 200 ms |
+| Recepción por iteración | Máximo 256 bytes |
+| Contenido por línea | Máximo 128 bytes, sin contar LF |
+
+El socket pertenece a WiFiClient. El envío usa `send(..., MSG_DONTWAIT)` sobre
+su descriptor para evitar los reintentos bloqueantes de WiFiClient::write en
+el framework instalado. Conserva el desplazamiento en escrituras parciales;
+si el envío no avanza dentro del plazo, cierra la sesión y descarta la trama.
+`[TX]` indica entrega completa al socket local, no confirmación de recepción
+por el servidor; el contrato no incluye confirmaciones por medición.
+
+Ante ERROR, respuesta inesperada, byte de control/no ASCII o línea excesiva,
+el cliente registra el problema y vuelve a conectar. No acepta OK con espacios,
+en minúsculas, con CRLF ni un OK repetido durante la sesión.
+
+La solución tiene esperas acotadas, no es completamente asíncrona: el intento
+TCP puede ocupar hasta 100 ms y pulseIn hasta 30 ms, además de la planificación
+del sistema y las llamadas WiFi. La cadencia real debe medirse en hardware,
+especialmente durante reconexiones; no se garantiza tiempo real estricto.
+
+**Estado de integración:** el servidor del repositorio aún implementa únicamente
+el transporte y no responde OK. Con ese servidor el sensor enviará HELLO y
+reintentará al vencer los 5 s, sin enviar distancias. Completar el servidor es
+el siguiente componente y requiere autorización; no se modificó en esta entrega.
 
 ## Compilar, cargar y abrir el monitor
 
@@ -98,7 +171,7 @@ y comprobar el cableado y divisor. Despues volver a probar el sensor.
    si se detecta otra superficie.
 6. Para una prueba controlada de ausencia de eco, apagar el circuito,
    desconectar ECHO del sensor de la entrada del divisor y conservar la
-   resistencia del divisor entre GPIO 2 y GND. Encender: deben aparecer
+   resistencia del divisor entre GPIO 35 y GND. Encender: deben aparecer
    errores cada 500 ms, sin detenerse. Apagar, restaurar ECHO y encender:
    deben volver las distancias validas.
 7. Acercar un objeto a menos de 2 cm puede producir `OutOfRange`, timeout o
@@ -108,18 +181,53 @@ y comprobar el cableado y divisor. Despues volver a probar el sensor.
 Ejemplo ilustrativo de salida (no son mediciones realizadas):
 
 ```text
-HC-SR04 | TRIG=4 | ECHO=2 | intervalo=500 ms
+HC-SR04 | TRIG=32 | ECHO=35 | intervalo=500 ms
 [500 ms] Distancia: 20.00 cm
 [1000 ms] ERROR: sin pulso ECHO completo en 30 ms
 [1500 ms] Distancia: 19.98 cm
 ```
 
-## Resultados de verificacion
+## Pruebas de red pendientes en hardware
 
-- Compilacion: el registro aportado por el usuario muestra un firmware
-  generado, con 21472 bytes de RAM (6.6 %) y 270297 bytes de flash (20.6 %).
-- Carga: el registro muestra deteccion del ESP32 y ejecucion del stub, pero
-  falla al escribir la flash a 460800 baudios. Reintento a 115200 y prueba
-  con la placa sola: pendientes; no se ha confirmado una carga exitosa.
-- Pruebas fisicas, cadencia real y precision: pendientes en el ESP32 con sensor.
-- No se han obtenido mediciones reales durante la implementacion.
+Cuando el servidor implemente el contrato, configurar ambos equipos en una red
+que permita su comunicación y comprobar:
+
+1. Se registra WiFi conectado, TCP conectado, TX HELLO y OK recibido, en ese orden.
+   No debe aparecer TX DIST/INVALID antes de OK, aunque sí lecturas locales.
+2. Una superficie conocida produce TX DIST; ausencia de eco produce TX INVALID.
+3. El servidor recibe aproximadamente dos mensajes por segundo. Medir la cadencia
+   también con fallos y reintentos, sin inferirla solamente de la configuración.
+4. Apagar WiFi o cerrar el servidor produce reconexión. Después del siguiente OK
+   solo debe enviarse la lectura actual; cambiar el objeto durante la desconexión
+   ayuda a comprobarlo.
+5. Un servidor de prueba que omita OK debe provocar timeout; si divide OK en
+   fragmentos, no debe habilitarse el envío hasta recibir el LF.
+
+## Pruebas automatizadas y resultados
+
+Desde la raíz, con Python 3 y un compilador C++ (Apple Clang en este Mac):
+
+```sh
+python3 -B src/sensor/tests/run_tests.py
+```
+
+El script compila los archivos reales SensorClient.cpp, UltrasonicSensor.cpp y
+main.cpp contra dobles de Arduino, WiFiClient, reloj y socket. El ejecutable se
+crea en una carpeta temporal. Las pruebas C++ quedan vacías en la compilación
+ESP32 porque solo se activan con SENSOR_HOST_TEST; no alteran platformio.ini.
+
+Resultado: **15 pruebas simuladas aprobadas, 0 fallos**. Cubren medición y timeout,
+pines, intervalo local de 500 ms, espera y fragmentación de OK, formatos y límites,
+INVALID, rechazo de respuestas incorrectas, reconexión TCP/WiFi, timeout de
+identificación, escrituras parciales, error/atasco de envío, descarte de datos
+anteriores, desbordamiento de millis() y configuración vacía.
+
+Compilación `pio run -e sensor`: **SUCCESS**, Espressif32 7.1.0 y Arduino ESP32
+2.0.17. RAM: 45024 bytes (13.7 %); flash: 746465 bytes (57.0 %). Se usó la
+configuración local vacía; no se introdujeron credenciales reales.
+
+La clase UltrasonicSensor no se modificó. Sus pruebas inyectan pulsos simulados:
+no certifican precisión, voltajes ni señales eléctricas. Tampoco los dobles de
+WiFi/socket prueban el enlace inalámbrico o los tiempos reales del framework.
+No se cargó este firmware ni se realizaron pruebas físicas o de integración
+completa con los dos ESP32. Estas verificaciones siguen pendientes.
