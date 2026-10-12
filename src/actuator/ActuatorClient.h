@@ -1,7 +1,3 @@
-/**
- * @file ActuatorClient.h
- * @brief Conexión WiFi + cliente TCP con reconexión automática.
- */
 #pragma once
 
 #include <WiFi.h>
@@ -9,14 +5,6 @@
 #include "ActuatorConfig.h"
 #include "ActuatorManager.h"
 
-/**
- * @class ActuatorClient
- * @brief Máquina de estados no bloqueante:
- *        WIFI_CONNECTING -> TCP_CONNECTING -> CONNECTED -> (RETRY_WAIT) -> ...
- *
- * Mientras no hay conexión con el servidor, los LEDs quedan apagados
- * (estado seguro). Por eso el connect() con timeout no afecta al parpadeo.
- */
 class ActuatorClient {
 public:
   explicit ActuatorClient(ActuatorManager& actuators);

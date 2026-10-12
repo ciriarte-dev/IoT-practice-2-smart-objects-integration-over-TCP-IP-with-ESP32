@@ -16,7 +16,7 @@ const Entry kCommands[] = {
     {"YELLOW_ON", Command::YELLOW_ON},
     {"GREEN_ON", Command::GREEN_ON},
 };
-}  // namespace
+} 
 
 Command CommandParser::parse(const char* text) {
   if (text == nullptr) {

@@ -1,10 +1,3 @@
-/**
- * @file ActuatorConfig.h
- * @brief Constantes de configuración del objeto inteligente actuador (3 LEDs).
- *
- * Las credenciales WiFi y la IP/puerto del servidor NO están aquí:
- * viven en "secrets.h" (ignorado por Git). Ver "secrets.example.h".
- */
 #pragma once
 
 #include <Arduino.h>

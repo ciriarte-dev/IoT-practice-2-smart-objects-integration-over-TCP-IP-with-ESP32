@@ -1,8 +1,6 @@
 #include <Arduino.h>
-
 #include "ActuatorConfig.h"
 #include "ActuatorManager.h"
-
 #ifndef SELF_TEST
 #include "ActuatorClient.h"
 #endif
