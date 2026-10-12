@@ -14,7 +14,7 @@ ActuatorClient client(actuators);
 #else
 /** Recorre cada comando cada 4 s e incluye uno inválido ("FOO"). */
 static void runSelfTest() {
-  static const char* kSteps[] = {"RED_BLINK", "YELLOW_ON", "GREEN_ON", "FOO"};
+  static const char* kSteps[] = {"LED RED BLINK", "LED YELLOW ON", "LED GREEN ON", "LED ALL OFF", "FOO"};
   static uint8_t index = 0;
   static uint32_t lastMs = 0;
   static bool first = true;
@@ -23,11 +23,11 @@ static void runSelfTest() {
     first = false;
     lastMs = millis();
     const char* text = kSteps[index];
-    index = (index + 1) % 4;
+    index = (index + 1) % (sizeof(kSteps) / sizeof(kSteps[0]));
 
     Serial.printf("[TEST] Comando: %s\n", text);
     if (!actuators.apply(CommandParser::parse(text))) {
-      Serial.println("[TEST] Inválido: el estado no cambió");
+      Serial.println("[TEST] Inválido: todos los LEDs apagados");
     }
   }
 }
@@ -35,19 +35,19 @@ static void runSelfTest() {
 
 void setup() {
   Serial.begin(cfg::SERIAL_BAUD);
-  delay(300);
+  actuators.begin();  // Apagar inmediatamente, antes de cualquier conexión.
   Serial.println("\n=== Actuador ESP32 (3 LEDs) ===");
-  actuators.begin();
 #ifndef SELF_TEST
   client.begin();
 #endif
 }
 
 void loop() {
-  actuators.update();  // Parpadeo no bloqueante.
 #ifdef SELF_TEST
   runSelfTest();
 #else
   client.update();
 #endif
+  actuators.update();  // Parpadeo no bloqueante, tras comprobar seguridad de red.
+  delay(1);  // Ceder CPU sin esperar el intervalo de parpadeo.
 }

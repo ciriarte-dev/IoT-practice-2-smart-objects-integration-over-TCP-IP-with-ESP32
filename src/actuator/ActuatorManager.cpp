@@ -17,6 +17,7 @@ void ActuatorManager::begin() {
 
 bool ActuatorManager::apply(Command cmd) {
   if (cmd == Command::INVALID) {
+    safeState();
     return false;
   }
   if (cmd == current_) {
@@ -28,6 +29,7 @@ bool ActuatorManager::apply(Command cmd) {
     case Command::RED_BLINK: red_.startBlink(cfg::BLINK_INTERVAL_MS); break;
     case Command::YELLOW_ON: yellow_.on(); break;
     case Command::GREEN_ON:  green_.on(); break;
+    case Command::ALL_OFF: break;  // allOff() ya apagó los tres LEDs.
     default: break;
   }
   current_ = cmd;

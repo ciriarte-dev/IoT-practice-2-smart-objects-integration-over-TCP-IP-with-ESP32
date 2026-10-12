@@ -17,18 +17,20 @@ constexpr uint8_t PIN_YELLOW = 26;
 constexpr uint8_t PIN_GREEN  = 27;
 
 // ---- Comportamiento de los LEDs ----
-constexpr uint32_t BLINK_INTERVAL_MS = 250;  ///< Medio periodo del parpadeo rojo.
+constexpr uint32_t BLINK_INTERVAL_MS = 500;  ///< 500 ms encendido / 500 ms apagado.
 
 // ---- Red ----
-constexpr uint32_t WIFI_RETRY_MS         = 10000;  ///< Reintento de WiFi.begin().
+constexpr uint32_t WIFI_RETRY_MS         = 2000;  ///< Reintento de WiFi.begin().
 constexpr uint32_t TCP_RETRY_MS          = 2000;   ///< Espera entre reintentos TCP.
-constexpr uint32_t TCP_CONNECT_TIMEOUT_MS = 2000;  ///< Timeout de connect().
+constexpr uint32_t TCP_CONNECT_TIMEOUT_MS = 100;  ///< Espera acotada con LEDs apagados.
+constexpr uint32_t HELLO_SEND_TIMEOUT_MS = 200;
+constexpr uint32_t HANDSHAKE_TIMEOUT_MS = 5000;
+constexpr uint32_t COMMAND_TIMEOUT_MS = 3000;
 
 // ---- Protocolo ----
-constexpr size_t MAX_LINE_LENGTH = 32;  ///< Tamaño máximo de un comando (con '\0').
-constexpr bool   SEND_HELLO      = true;   ///< Enviar identificación al conectar.
-constexpr bool   SEND_REPLIES    = true;   ///< Responder OK/ERR a cada comando.
-constexpr const char* HELLO_MSG  = "HELLO ACTUATOR";
+constexpr size_t MAX_LINE_LENGTH = 128;  ///< Contenido, sin LF ni terminador C.
+constexpr size_t READ_BUDGET_BYTES = 256; ///< Limitar trabajo por iteración.
+constexpr const char* HELLO_MSG  = "HELLO ACTUATOR\n";
 
 // ---- Serial ----
 constexpr unsigned long SERIAL_BAUD = 115200;

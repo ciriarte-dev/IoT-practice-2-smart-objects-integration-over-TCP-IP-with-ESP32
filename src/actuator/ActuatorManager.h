@@ -23,7 +23,7 @@ public:
   /**
    * Aplica un comando: apaga todo y activa únicamente el comportamiento pedido.
    * Si el comando es el que ya está activo, no hace nada (no reinicia el parpadeo).
-   * @return false si el comando es INVALID (el estado actual no cambia).
+   * @return false si el comando es INVALID (apaga todos los LEDs).
    */
   bool apply(Command cmd);
 
