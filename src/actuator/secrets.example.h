@@ -4,9 +4,10 @@
  */
 #pragma once
 
-#define WIFI_SSID     "NOMBRE_DE_TU_RED"
-#define WIFI_PASSWORD "CLAVE_DE_TU_RED"
+// Vacío: compila y mantiene LEDs apagados, sin intentar conectar.
+#define WIFI_SSID     ""
+#define WIFI_PASSWORD ""
 
 // IP de la PC donde corre el servidor Python (misma red WiFi) y su puerto.
-#define SERVER_IP     "192.168.1.100"
-#define SERVER_PORT   5000
+#define SERVER_IP     "0.0.0.0"  // Sustituir por la IPv4 real del servidor.
+#define SERVER_PORT   8080

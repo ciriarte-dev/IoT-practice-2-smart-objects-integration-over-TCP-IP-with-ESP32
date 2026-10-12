@@ -11,7 +11,8 @@ enum class Command : uint8_t {
   INVALID,     ///< Texto no reconocido (o "ningún comando activo").
   RED_BLINK,   ///< LED rojo parpadeando.
   YELLOW_ON,   ///< LED amarillo encendido.
-  GREEN_ON     ///< LED verde encendido.
+  GREEN_ON,    ///< LED verde encendido.
+  ALL_OFF      ///< Todos apagados por orden explícita del servidor.
 };
 
 /**
@@ -22,8 +23,8 @@ enum class Command : uint8_t {
 class CommandParser {
 public:
   /**
-   * Interpreta una línea (sin '\n'). Ignora espacios laterales y
-   * mayúsculas/minúsculas.
+   * Interpreta una línea (sin '\n') con coincidencia exacta ASCII.
+   * No acepta espacios adicionales ni cambios de mayúsculas.
    * @return El comando, o Command::INVALID si no coincide con ninguno.
    */
   static Command parse(const char* text);

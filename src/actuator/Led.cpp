@@ -1,6 +1,6 @@
 #include "Led.h"
 
-Led::Led(uint8_t pin, const char* name) : pin_(pin), name_(name) {}
+Led::Led(uint8_t pin) : pin_(pin) {}
 
 void Led::begin() {
   pinMode(pin_, OUTPUT);

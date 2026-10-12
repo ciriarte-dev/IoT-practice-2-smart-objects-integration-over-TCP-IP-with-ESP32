@@ -23,7 +23,7 @@ public:
   /**
    * Aplica un comando: apaga todo y activa únicamente el comportamiento pedido.
    * Si el comando es el que ya está activo, no hace nada (no reinicia el parpadeo).
-   * @return false si el comando es INVALID (el estado actual no cambia).
+   * @return false si el comando es INVALID (apaga todos los LEDs).
    */
   bool apply(Command cmd);
 
@@ -32,9 +32,6 @@ public:
 
   /** Avanza el parpadeo. Llamar en cada loop(). */
   void update();
-
-  /** @return Comando activo (INVALID si no hay ninguno / estado seguro). */
-  Command current() const { return current_; }
 
   /** Imprime el estado de los tres LEDs en el monitor serial. */
   void printStatus() const;

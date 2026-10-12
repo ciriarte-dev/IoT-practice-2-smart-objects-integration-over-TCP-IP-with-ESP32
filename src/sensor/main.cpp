@@ -1,27 +1,30 @@
 #include <Arduino.h>
 
 #include "UltrasonicSensor.h"
+#include "SensorClient.h"
+#include "SensorConfig.h"
+#include "secrets.h"
 
 namespace {
-constexpr uint8_t kTriggerPin = 4;  // D4
-constexpr uint8_t kEchoPin = 2;     // D2
-constexpr uint32_t kMeasurementIntervalMs = 500;
-
-UltrasonicSensor sensor(kTriggerPin, kEchoPin);
+UltrasonicSensor sensor(sensorConfig::triggerPin, sensorConfig::echoPin);
+SensorClient client(SENSOR_WIFI_SSID, SENSOR_WIFI_PASSWORD,
+                    SENSOR_SERVER_IP, SENSOR_SERVER_PORT);
 uint32_t lastMeasurementMs = 0;
 }  // namespace
 
 void setup() {
     Serial.begin(115200);
     sensor.begin();
-    Serial.println("HC-SR04 | TRIG=4 | ECHO=2 | intervalo=500 ms");
+    Serial.println("HC-SR04 | TRIG=32 | ECHO=35 | intervalo=500 ms");
+    client.begin();
     lastMeasurementMs = millis();
 }
 
 void loop() {
+    client.update();
     const uint32_t now = millis();
     // La resta sin signo mantiene el intervalo al desbordarse millis().
-    if (static_cast<uint32_t>(now - lastMeasurementMs) < kMeasurementIntervalMs) {
+    if (static_cast<uint32_t>(now - lastMeasurementMs) < sensorConfig::measurementIntervalMs) {
         delay(1);  // Ceder CPU sin bloquear durante los 500 ms del intervalo.
         return;
     }
@@ -29,6 +32,7 @@ void loop() {
     // No acumular ni ejecutar rafagas de lecturas si el loop se retrasa.
     lastMeasurementMs = now;
     const UltrasonicSensor::Measurement measurement = sensor.measure();
+    client.sendMeasurement(measurement);
 
     Serial.printf("[%lu ms] ", static_cast<unsigned long>(now));
     switch (measurement.status) {
