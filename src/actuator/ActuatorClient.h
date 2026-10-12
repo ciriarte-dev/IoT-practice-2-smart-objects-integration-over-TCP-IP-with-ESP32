@@ -21,7 +21,7 @@ class ActuatorClient {
 public:
   explicit ActuatorClient(ActuatorManager& actuators);
   ActuatorClient(ActuatorManager& actuators, const char* ssid, const char* password,
-                 const char* serverIp, uint16_t port = 5000);
+                 const char* serverIp, uint16_t port = 8080);
 
   /** Inicia la conexión WiFi. Llamar una vez en setup(). */
   void begin();

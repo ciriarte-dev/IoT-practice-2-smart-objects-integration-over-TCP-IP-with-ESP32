@@ -67,7 +67,7 @@ void FakeWiFi::disconnect() { fake::wifi = 0; }
 void FakeWiFi::begin(const char*, const char*) { ++fake::wifiAttempts; }
 int FakeWiFi::status() { return fake::wifi; }
 int WiFiClient::connect(IPAddress, uint16_t port, int32_t timeout) {
-    if (port != 5000 || timeout != 100) throw std::runtime_error("Destino/timeout incorrecto");
+    if (port != 8080 || timeout != 100) throw std::runtime_error("Destino/timeout incorrecto");
     ++fake::tcpAttempts;
     fake::connected = fake::connectSucceeds;
     if (fake::connected) fake::sessions.emplace_back();
@@ -116,9 +116,10 @@ int main() {
                 check(CommandParser::parse(text)==Command::INVALID);
             check(CommandParser::parse(nullptr)==Command::INVALID);
         }},
-        {"arranque y GPIO conservados", [] {
+        {"arranque y GPIO del cableado actual", [] {
             Fixture f; lights(0,0,0);
-            check(fake::modes[25]==OUTPUT && fake::modes[26]==OUTPUT && fake::modes[27]==OUTPUT);
+            check(cfg::PIN_RED==4 && cfg::PIN_YELLOW==2 && cfg::PIN_GREEN==15);
+            check(fake::modes[4]==OUTPUT && fake::modes[2]==OUTPUT && fake::modes[15]==OUTPUT);
             f.connect(); lights(0,0,0);
         }},
         {"estados exclusivos y ALL OFF", [] {

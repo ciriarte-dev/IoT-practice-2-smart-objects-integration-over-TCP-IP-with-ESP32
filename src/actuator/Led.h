@@ -6,7 +6,7 @@ class Led {
 public:
   enum class Mode : uint8_t { OFF, ON, BLINK };
 
-  Led(uint8_t pin, const char* name);
+  explicit Led(uint8_t pin);
 
   /** Configura el pin como salida y deja el LED apagado. */
   void begin();
@@ -22,9 +22,6 @@ public:
   /** Avanza el parpadeo. Llamar en cada loop(). */
   void update();
 
-  Mode mode() const { return mode_; }
-  const char* name() const { return name_; }
-
   /** @return "OFF", "ON" o "BLINK". */
   const char* modeText() const;
 
@@ -32,7 +29,6 @@ private:
   void write(bool level);
 
   uint8_t pin_;
-  const char* name_;
   Mode mode_ = Mode::OFF;
   bool level_ = false;
   uint32_t intervalMs_ = 0;

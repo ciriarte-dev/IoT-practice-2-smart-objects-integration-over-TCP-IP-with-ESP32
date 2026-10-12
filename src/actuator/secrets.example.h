@@ -10,4 +10,4 @@
 
 // IP de la PC donde corre el servidor Python (misma red WiFi) y su puerto.
 #define SERVER_IP     "0.0.0.0"  // Sustituir por la IPv4 real del servidor.
-#define SERVER_PORT   5000
+#define SERVER_PORT   8080

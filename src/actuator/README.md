@@ -18,8 +18,8 @@ El actuador no recibe distancias ni ejecuta su clasificación.
 | `secrets.example.h` | Plantilla sin credenciales reales. |
 | `tests/` | Pruebas C++ con hardware y red simulados. |
 
-Los pines originales no se cambiaron: rojo GPIO 25, amarillo GPIO 26, verde
-GPIO 27. Las salidas son activas en HIGH; el cableado previsto usa una resistencia
+Pines del cableado actual: rojo D4 (GPIO 4), amarillo D2 (GPIO 2), verde
+D15 (GPIO 15). Las salidas son activas en HIGH; el cableado previsto usa una resistencia
 de 220 ohm por LED hacia GND, con masa común. El cableado físico no se verificó
 en esta entrega.
 
@@ -79,7 +79,7 @@ Completar solo el archivo local:
 - `WIFI_SSID`: nombre de la red WiFi.
 - `WIFI_PASSWORD`: contraseña, sin colocarla en la plantilla versionada.
 - `SERVER_IP`: IPv4 real del Mac servidor en la misma red.
-- `SERVER_PORT`: `5000`.
+- `SERVER_PORT`: `8080`.
 
 No usar 0.0.0.0 ni 127.0.0.1 como destino del ESP32. El marcador 0.0.0.0 o un
 SSID vacío deshabilitan la red y mantienen el estado seguro. Las contraseñas no

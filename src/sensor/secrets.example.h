@@ -6,4 +6,4 @@
 #define SENSOR_WIFI_PASSWORD ""
 // IPv4 real del Mac en la red local. No usar 0.0.0.0 como destino.
 #define SENSOR_SERVER_IP "0.0.0.0"
-#define SENSOR_SERVER_PORT 5000
+#define SENSOR_SERVER_PORT 8080

@@ -373,7 +373,7 @@ class ProtocolTests(unittest.TestCase):
 class CommandLineTests(unittest.TestCase):
     def test_default_host_and_port(self):
         args = build_parser().parse_args([])
-        self.assertEqual((args.host, args.port), ("0.0.0.0", 5000))
+        self.assertEqual((args.host, args.port), ("0.0.0.0", 8080))
 
     def test_invalid_port_is_reported_without_traceback(self):
         result = subprocess.run(

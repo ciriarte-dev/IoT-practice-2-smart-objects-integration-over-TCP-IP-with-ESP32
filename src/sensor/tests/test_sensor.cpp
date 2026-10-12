@@ -67,7 +67,7 @@ void FakeWiFi::disconnect() { fake::wifi = 0; }
 void FakeWiFi::begin(const char*, const char*) { ++fake::wifiAttempts; }
 int FakeWiFi::status() { return fake::wifi; }
 int WiFiClient::connect(IPAddress, uint16_t port, int32_t timeout) {
-    if (port != 5000 || timeout != 100) throw std::runtime_error("Destino/timeout incorrecto");
+    if (port != 8080 || timeout != 100) throw std::runtime_error("Destino/timeout incorrecto");
     ++fake::tcpAttempts;
     fake::connected = fake::connectSucceeds;
     if (fake::connected) fake::sessions.emplace_back();

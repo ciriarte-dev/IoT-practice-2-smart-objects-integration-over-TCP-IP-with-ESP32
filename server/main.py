@@ -33,8 +33,8 @@ def positive_seconds(value):
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Servidor TCP IoT")
     parser.add_argument("--host", default="0.0.0.0", help="IPv4 de escucha (0.0.0.0)")
-    parser.add_argument("--port", type=port_number, default=5000,
-                        help="Puerto de escucha (5000); 0 elige un puerto libre")
+    parser.add_argument("--port", type=port_number, default=8080,
+                        help="Puerto de escucha (8080); 0 elige un puerto libre")
     parser.add_argument("--identification-timeout", type=positive_seconds, default=5.0)
     parser.add_argument("--measurement-ttl", type=positive_seconds, default=2.0)
     parser.add_argument("--resend-interval", type=positive_seconds, default=0.5)

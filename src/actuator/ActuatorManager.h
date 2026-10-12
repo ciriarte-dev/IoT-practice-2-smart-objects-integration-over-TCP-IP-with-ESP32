@@ -33,9 +33,6 @@ public:
   /** Avanza el parpadeo. Llamar en cada loop(). */
   void update();
 
-  /** @return Comando activo (INVALID si no hay ninguno / estado seguro). */
-  Command current() const { return current_; }
-
   /** Imprime el estado de los tres LEDs en el monitor serial. */
   void printStatus() const;
 

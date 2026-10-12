@@ -278,7 +278,7 @@ un fallo de transporte puede impedir su entrega.
 Desde la raíz del proyecto:
 
 ```sh
-python3 server/main.py --host 0.0.0.0 --port 5000
+python3 server/main.py --host 0.0.0.0 --port 8080
 ```
 
 También funcionan `python3 server/main.py` y `python3 -m server.main`.
@@ -288,7 +288,7 @@ No se instalan dependencias externas. Para detenerlo, usar Ctrl+C.
 | Argumento | Valor predeterminado | Uso |
 | --- | --- | --- |
 | `--host` | `0.0.0.0` | Escucha IPv4; `127.0.0.1` permite pruebas solo locales. |
-| `--port` | `5000` | Puerto TCP; 0 pide un puerto libre para pruebas. |
+| `--port` | `8080` | Puerto TCP; 0 pide un puerto libre para pruebas. |
 | `--identification-timeout` | `5.0` | Segundos máximos antes de identificarse. |
 | `--measurement-ttl` | `2.0` | Segundos de vigencia de la última lectura válida. |
 | `--resend-interval` | `0.5` | Segundos entre reenvíos al actuador. |
@@ -299,10 +299,10 @@ Los argumentos temporales aceptan solo números positivos y finitos. El construc
 permite ajustar `max_pending_bytes`, con un mínimo de 32 bytes.
 
 El servidor sale con código 0 ante Ctrl+C, 1 ante errores del sistema como puerto
-ocupado y 2 ante argumentos inválidos. Si 5000 está ocupado, identificar el servicio
+ocupado y 2 ante argumentos inválidos. Si 8080 está ocupado, identificar el servicio
 que lo utiliza o coordinar otro puerto en los tres componentes.
 
-Los ESP32 deben usar la IPv4 real del Mac en su red local y el puerto 5000.
+Los ESP32 deben usar la IPv4 real del Mac en su red local y el puerto 8080.
 `0.0.0.0` sirve para escuchar y no es una dirección de destino. Verificar que el
 firewall permita conexiones entrantes a Python y que la red no aísle los clientes.
 No se han verificado la red, firewall o dispositivos físicos en esta entrega.
@@ -312,7 +312,7 @@ No se han verificado la red, firewall o dispositivos físicos en esta entrega.
 Con el servidor activo, abrir dos terminales y ejecutar en cada una:
 
 ```sh
-nc 127.0.0.1 5000
+nc 127.0.0.1 8080
 ```
 
 Identificarse antes de 5 segundos. En una terminal escribir `HELLO ACTUATOR` y

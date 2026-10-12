@@ -53,7 +53,7 @@ con valores vacíos. Editar únicamente el archivo local:
 - `SENSOR_WIFI_SSID`: nombre de la red WiFi.
 - `SENSOR_WIFI_PASSWORD`: contraseña de esa red.
 - `SENSOR_SERVER_IP`: IPv4 real del equipo servidor en la red local.
-- `SENSOR_SERVER_PORT`: mantener `5000`.
+- `SENSOR_SERVER_PORT`: mantener `8080`.
 
 No usar `0.0.0.0` ni `127.0.0.1` como destino del ESP32. El valor `0.0.0.0`
 del ejemplo es un marcador que deshabilita la red, no una dirección operativa.

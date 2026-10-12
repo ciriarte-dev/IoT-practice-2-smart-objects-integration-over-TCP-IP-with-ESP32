@@ -3,9 +3,9 @@
 #include "ActuatorConfig.h"
 
 ActuatorManager::ActuatorManager()
-    : red_(cfg::PIN_RED, "ROJO"),
-      yellow_(cfg::PIN_YELLOW, "AMARILLO"),
-      green_(cfg::PIN_GREEN, "VERDE") {}
+    : red_(cfg::PIN_RED),
+      yellow_(cfg::PIN_YELLOW),
+      green_(cfg::PIN_GREEN) {}
 
 void ActuatorManager::begin() {
   red_.begin();

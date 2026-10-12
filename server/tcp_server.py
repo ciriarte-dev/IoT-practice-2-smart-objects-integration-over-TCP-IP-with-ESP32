@@ -41,7 +41,7 @@ class ClientConnection:
 class TCPServer:
     """Un solo hilo atiende sockets, sesiones y plazos monotónicos."""
 
-    def __init__(self, host="0.0.0.0", port=5000, *, clock=time.monotonic,
+    def __init__(self, host="0.0.0.0", port=8080, *, clock=time.monotonic,
                  identification_timeout=5.0, measurement_ttl=2.0,
                  resend_interval=0.5, send_timeout=1.0, max_pending_bytes=1024):
         if not 0 <= port <= 65535:

@@ -12,9 +12,9 @@
 namespace cfg {
 
 // ---- Pines GPIO (cada LED con resistencia de 220 ohm hacia GND) ----
-constexpr uint8_t PIN_RED    = 25;
-constexpr uint8_t PIN_YELLOW = 26;
-constexpr uint8_t PIN_GREEN  = 27;
+constexpr uint8_t PIN_RED    = 4;   // D4
+constexpr uint8_t PIN_YELLOW = 2;   // D2
+constexpr uint8_t PIN_GREEN  = 15;  // D15
 
 // ---- Comportamiento de los LEDs ----
 constexpr uint32_t BLINK_INTERVAL_MS = 500;  ///< 500 ms encendido / 500 ms apagado.

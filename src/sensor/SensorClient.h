@@ -8,7 +8,7 @@
 class SensorClient {
 public:
     SensorClient(const char* ssid, const char* password, const char* serverIp,
-                 uint16_t port = 5000);
+                 uint16_t port = 8080);
     void begin();
     void update();
     // Solo admite una lectura recien obtenida. No conserva lecturas sin conexion.
