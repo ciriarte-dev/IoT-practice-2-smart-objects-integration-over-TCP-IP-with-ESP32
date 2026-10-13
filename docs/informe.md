@@ -331,7 +331,7 @@ sequenceDiagram
 
 ### 2.5 Especificación del protocolo de aplicación
 
-Para que los ESP32 y el servidor se entiendan, definimos nuestro propio protocolo sobre TCP. Elegimos mensajes de texto plano porque son fáciles de leer y de depurar desde el monitor serie. En esta sección explicamos sus reglas principales; en esta sección explicamos sus reglas principales; el detalle completo está en [`server/README.md`](../server/README.md).
+Para que los ESP32 y el servidor se entiendan, definimos nuestro propio protocolo sobre TCP. Elegimos mensajes de texto plano porque son fáciles de leer y de depurar desde el monitor serie. En esta sección explicamos sus reglas principales; el detalle completo está en [`server/README.md`](../server/README.md).
 
 #### Transporte y formato
 
