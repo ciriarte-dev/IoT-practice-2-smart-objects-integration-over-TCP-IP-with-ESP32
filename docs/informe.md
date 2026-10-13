@@ -15,7 +15,7 @@
 - Henry Alejandro Rivera Mendez
 
 
-# **1. Requerimientos funcionales y No funcionales**
+# 1. Requerimientos funcionales y No funcionales
 
 ### 1.1 Requerimientos funcionales
 
@@ -51,9 +51,9 @@
 
 ---
 
-## 2. Analisis y diseño
+## 2. Análisis y diseño
 
-### 2.1 Diagrama de arquitectura (despligue)
+### 2.1 Diagrama de arquitectura (despliegue)
 
 El sistema sigue una arquitectura **cliente-servidor en estrella**: los dos ESP32 son clientes TCP y no se comunican entre sí; toda decisión pasa por el servidor. Así el sensor solo mide, el actuador solo ejecuta y la lógica de control queda en un único lugar.
 
