@@ -98,7 +98,7 @@ flowchart LR
 
 **Objeto inteligente 1 — Sensor**
 
-![ObjetoInteligente-1](https://hackmd.io/_uploads/HJllbMooMg.png)
+<img src="images/ObjetoInteligente-1.png" alt="Circuito del ESP32 sensor con HC-SR04" width="600">
 
 | HC-SR04 | ESP32 | Observación |
 | --- | --- | --- |
@@ -109,8 +109,7 @@ flowchart LR
 
 **Objeto inteligente 2 — Actuador**
 
-![ObjetoInteligente-2](https://hackmd.io/_uploads/ryel-zjozx.png)
-
+<img src="images/ObjetoInteligente-2.png" alt="Circuito del ESP32 actuador con tres LEDs" width="600">
 
 | LED | ESP32 | Resistencia | Comportamiento |
 | --- | --- | --- | --- |
@@ -332,8 +331,7 @@ sequenceDiagram
 
 ### 2.5 Especificación del protocolo de aplicación
 
-Para que los ESP32 y el servidor se entiendan, definimos nuestro propio protocolo sobre TCP. Elegimos mensajes de texto plano porque son fáciles de leer y de depurar desde el monitor serie. En esta sección explicamos sus reglas principales; el detalle completo está en [`server/README.md`](server/README.md).
-
+Para que los ESP32 y el servidor se entiendan, definimos nuestro propio protocolo sobre TCP. Elegimos mensajes de texto plano porque son fáciles de leer y de depurar desde el monitor serie. En esta sección explicamos sus reglas principales; el detalle completo está en [`server/README.md`](../server/README.md)
 #### Transporte y formato
 
 | Aspecto | Definición |
