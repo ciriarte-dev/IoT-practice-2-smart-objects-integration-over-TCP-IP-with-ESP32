@@ -35,7 +35,7 @@
 | RF-12 | El servidor debe rechazar los mensajes que no cumplan el protocolo e informar el motivo al dispositivo que los envió. | Servidor |
 | RF-13 | El sistema debe registrar los eventos principales (conexiones, mediciones, cambios de estado, errores y desconexiones) para su supervisión. | Sensor, actuador, servidor |
 
-### 1.2 Requerimientos no funcionales
+### 1.2 Requerimientos No funcionales
 
 | ID | Categoría | Requerimiento |
 | --- | --- | --- |
